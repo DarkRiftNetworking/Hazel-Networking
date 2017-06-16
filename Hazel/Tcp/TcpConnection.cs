@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Hazel.Tcp
 {
@@ -86,11 +87,9 @@ namespace Hazel.Tcp
 
                 try
                 {
-                    IAsyncResult result = socket.BeginConnect(RemoteEndPoint, null, null);
-
-                    result.AsyncWaitHandle.WaitOne(timeout);
-
-                    socket.EndConnect(result);
+                    Task task = socket.ConnectAsync(RemoteEndPoint);
+                    
+                    task.Wait(timeout);
                 }
                 catch (Exception e)
                 {
@@ -147,7 +146,7 @@ namespace Hazel.Tcp
             
                 try
                 {
-                    socket.BeginSend(fullBytes, 0, fullBytes.Length, SocketFlags.None, null, null);
+                    socket.Send(fullBytes);
                 }
                 catch (Exception e)
                 {
@@ -259,67 +258,48 @@ namespace Hazel.Tcp
         /// <param name="callback">The callback </param>
         void StartWaitingForBytes(int length, Action<byte[]> callback)
         {
-            StateObject state = new StateObject(length, callback);
+            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+            args.SetBuffer(new byte[length], 0, length);
+            args.UserToken = callback;
+            args.Completed += ChunkReadCallback;
 
-            StartWaitingForChunk(state);
+            StartWaitingForChunk(args);
         }
 
         /// <summary>
         ///     Waits for the next chunk of data from this socket.
         /// </summary>
-        /// <param name="state">The StateObject for the receive operation.</param>
-        void StartWaitingForChunk(StateObject state)
+        /// <param name="args">The Socket args for the receive operation.</param>
+        void StartWaitingForChunk(SocketAsyncEventArgs args)
         {
             lock (socketLock)
             {
                 //Double check we've not disconnected then begin receiving
                 if (State == ConnectionState.Connected || State == ConnectionState.Connecting)
-                    socket.BeginReceive(state.buffer, state.totalBytesReceived, state.buffer.Length - state.totalBytesReceived, SocketFlags.None, ChunkReadCallback, state);
+                    socket.ReceiveAsync(args);
             }
         }
 
         /// <summary>
         ///     Called when a chunk has been read.
         /// </summary>
-        /// <param name="result"></param>
-        void ChunkReadCallback(IAsyncResult result)
+        void ChunkReadCallback(object sender, SocketAsyncEventArgs args)
         {
-            int bytesReceived;
-
-            //End the receive operation
-            try
-            {
-                lock (socketLock)
-                    bytesReceived = socket.EndReceive(result);
-            }
-            catch (ObjectDisposedException)
-            {
-                //If the socket's been disposed then we can just end there.
-                return;
-            }
-            catch (Exception e)
-            {
-                HandleDisconnect(new HazelException("An exception occured while completing a chunk read operation.", e));
-                return;
-            }
-
-            StateObject state = (StateObject)result.AsyncState;
-
-            state.totalBytesReceived += bytesReceived;      //TODO threading issues on state?
-
             //Exit if receive nothing
-            if (bytesReceived == 0)
+            if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
                 HandleDisconnect();
                 return;
             }
 
             //If we need to receive more then wait for more, else process it.
-            if (state.totalBytesReceived < state.buffer.Length)
+            if (args.Offset + args.BytesTransferred < args.Buffer.Length)
             {
+                args.SetBuffer(args.Offset + args.BytesTransferred, args.Buffer.Length - args.BytesTransferred);
+
                 try
                 {
-                    StartWaitingForChunk(state);
+                    StartWaitingForChunk(args);
                 }
                 catch (Exception e)
                 {
@@ -328,7 +308,10 @@ namespace Hazel.Tcp
                 }
             }
             else
-                state.callback.Invoke(state.buffer);
+            {
+                ((Action<byte[]>)args.UserToken).Invoke(args.Buffer);
+                args.Dispose();
+            }
         }
 
         /// <summary>
@@ -403,7 +386,7 @@ namespace Hazel.Tcp
 
                     if (socket.Connected)
                         socket.Shutdown(SocketShutdown.Send);
-                    socket.Close();
+                    socket.Dispose();
                 }
             }
 

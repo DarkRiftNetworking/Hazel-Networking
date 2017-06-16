@@ -63,7 +63,9 @@ namespace Hazel.Tcp
                     listener.Bind(EndPoint);
                     listener.Listen(1000);
 
-                    listener.BeginAccept(AcceptConnection, null);
+                    SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+                    args.Completed += AcceptConnection;
+                    listener.AcceptAsync(args);
                 }
             }
             catch (SocketException e)
@@ -75,28 +77,19 @@ namespace Hazel.Tcp
         /// <summary>
         ///     Called when a new connection has been accepted by the listener.
         /// </summary>
-        /// <param name="result">The asyncronous operation's result.</param>
-        void AcceptConnection(IAsyncResult result)
+        /// <param name="sender">The sender of the event.</param>
+        /// <param name="args">The async event args.</param>
+        void AcceptConnection(object sender, SocketAsyncEventArgs args)
         {
             lock (listener)
             {
-                //Accept Tcp socket
-                Socket tcpSocket;
-                try
-                {
-                    tcpSocket = listener.EndAccept(result);
-                }
-                catch (ObjectDisposedException)
-                {
-                    //If the socket's been disposed then we can just end there.
-                    return;
-                }
+                //Sort the event out
+                TcpConnection tcpConnection = new TcpConnection(args.AcceptSocket);
 
                 //Start listening for the next connection
-                listener.BeginAccept(new AsyncCallback(AcceptConnection), null);
+                listener.AcceptAsync(args);
 
-                //Sort the event out
-                TcpConnection tcpConnection = new TcpConnection(tcpSocket);
+                args.Dispose();
 
                 //Wait for handshake
                 tcpConnection.StartWaitingForHandshake(
@@ -117,7 +110,7 @@ namespace Hazel.Tcp
             if (disposing)
             {
                 lock (listener)
-                    listener.Close();
+                    listener.Dispose();
             }
 
             base.Dispose(disposing);

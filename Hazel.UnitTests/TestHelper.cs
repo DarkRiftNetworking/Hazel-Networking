@@ -35,6 +35,8 @@ namespace Hazel.UnitTests
             {
                 Trace.WriteLine("Data was received correctly.");
 
+                Assert.AreEqual(dataSize, args.Bytes.Length);
+
                 for (int i = 0; i < data.Length; i++)
                 {
                     Assert.AreEqual(data[i], args.Bytes[i]);

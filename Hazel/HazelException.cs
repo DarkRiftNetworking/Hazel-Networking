@@ -8,7 +8,6 @@ namespace Hazel
     /// <summary>
     ///     Wrapper for exceptions thrown from Hazel.
     /// </summary>
-    [Serializable]
     public class HazelException : Exception
     {
         internal HazelException(string msg) : base (msg)

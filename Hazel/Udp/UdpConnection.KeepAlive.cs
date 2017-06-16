@@ -65,7 +65,6 @@ namespace Hazel.Udp
                 keepAliveTimer = new Timer(
                     (o) =>
                     {
-                        Trace.WriteLine("Keepalive packet sent.");
                         SendHello(null, null);
                     },
                     null,

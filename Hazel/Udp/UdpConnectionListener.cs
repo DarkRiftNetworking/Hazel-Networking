@@ -76,20 +76,24 @@ namespace Hazel.Udp
                 throw new HazelException("Could not start listening as a SocketException occured", e);
             }
 
-            StartListeningForData();
+            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+            args.SetBuffer(dataBuffer, 0, dataBuffer.Length);
+            args.Completed += ReadCallback;
+
+            StartListeningForData(args);
         }
 
         /// <summary>
         ///     Instructs the listener to begin listening.
         /// </summary>
-        void StartListeningForData()
+        void StartListeningForData(SocketAsyncEventArgs args)
         {
-            EndPoint remoteEP = EndPoint;
-            
+            args.RemoteEndPoint = EndPoint;
+
             try
             {
                 lock (listener)
-                    listener.BeginReceiveFrom(dataBuffer, 0, dataBuffer.Length, SocketFlags.None, ref remoteEP, ReadCallback, dataBuffer);
+                    listener.ReceiveFromAsync(args);
             }
             catch (ObjectDisposedException)
             {
@@ -98,8 +102,13 @@ namespace Hazel.Udp
             catch (SocketException)
             {
                 //Client no longer reachable, pretend it didn't happen
-                //TODO possibly able to disconnect client, see other TODO
-                StartListeningForData();
+                //TODO possibly able to disconnect client
+                
+                //However, this thread suggests the IP is not passed out from WinSoc so maybe not possible
+                //http://stackoverflow.com/questions/2576926/python-socket-error-on-udp-data-receive-10054
+                
+                //Nevertheless this has now all changed from BeginReveiveFrom to ReceiveFromAsync so maybe?
+                StartListeningForData(args);
                 return;
             }
         }
@@ -107,45 +116,20 @@ namespace Hazel.Udp
         /// <summary>
         ///     Called when data has been received by the listener.
         /// </summary>
-        /// <param name="result">The asyncronous operation's result.</param>
-        void ReadCallback(IAsyncResult result)
+        void ReadCallback(object sender, SocketAsyncEventArgs args)
         {
-            int bytesReceived;
-            EndPoint remoteEndPoint = new IPEndPoint(IPMode == IPMode.IPv4 ? IPAddress.Any : IPAddress.IPv6Any, 0);
-
-            //End the receive operation
-            try
-            {
-                lock (listener)
-                    bytesReceived = listener.EndReceiveFrom(result, ref remoteEndPoint);
-            }
-            catch (ObjectDisposedException)
-            {
-                //If the socket's been disposed then we can just end there.
-                return;
-            }
-            catch (SocketException)
-            {
-                //Client no longer reachable, pretend it didn't happen
-                //TODO should this not inform the connection this client is lost???
-
-                //This thread suggests the IP is not passed out from WinSoc so maybe not possible
-                //http://stackoverflow.com/questions/2576926/python-socket-error-on-udp-data-receive-10054
-
-                StartListeningForData();
-                return;
-            }
-
             //Exit if no bytes read, we've closed.
-            if (bytesReceived == 0)
+            if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
                 return;
+
+            EndPoint remoteEndPoint = args.RemoteEndPoint;
 
             //Copy to new buffer
-            byte[] buffer = new byte[bytesReceived];
-            Buffer.BlockCopy((byte[])result.AsyncState, 0, buffer, 0, bytesReceived);
+            byte[] buffer = new byte[args.BytesTransferred];
+            Buffer.BlockCopy(args.Buffer, 0, buffer, 0, args.BytesTransferred);
 
             //Begin receiving again
-            StartListeningForData();
+            StartListeningForData(args);
 
             bool aware;
             UdpServerConnection connection;
@@ -192,17 +176,9 @@ namespace Hazel.Udp
             {
                 lock (listener)
                 {
-                    listener.BeginSendTo(
+                    listener.SendTo(
                         bytes,
-                        0,
-                        bytes.Length,
-                        SocketFlags.None,
-                        endPoint,
-                        delegate (IAsyncResult result)
-                        {
-                            listener.EndSendTo(result);
-                        },
-                        null
+                        endPoint
                     );
                 }
             }
@@ -233,7 +209,7 @@ namespace Hazel.Udp
             if (disposing)
             {
                 lock (listener)
-                    listener.Close();
+                    listener.Dispose();
             }
 
             base.Dispose(disposing);

@@ -232,8 +232,6 @@ namespace Hazel.Udp
                             //No longer connected
                             HandleDisconnect(new HazelException("Could not resend data as connection is no longer connected", e));
                         }
-
-                        Trace.WriteLine("Resend.");
                     },
                     resendTimeout > 0 ? resendTimeout : (AveragePing != 0 ? (int)AveragePing * 4 : 200),
                     ackCallback

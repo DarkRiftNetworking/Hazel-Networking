@@ -66,30 +66,7 @@ namespace Hazel.Udp
 
                 try
                 {
-                    socket.BeginSendTo(
-                        bytes, 
-                        0, 
-                        bytes.Length, 
-                        SocketFlags.None, 
-                        RemoteEndPoint,
-                        delegate (IAsyncResult result)
-                        {
-                            try
-                            {
-                                lock (socket)
-                                    socket.EndSendTo(result);
-                            }
-                            catch (ObjectDisposedException e)
-                            {
-                                HandleDisconnect(new HazelException("Could not send as the socket was disposed of.", e));
-                            }
-                            catch (SocketException e)
-                            {
-                                HandleDisconnect(new HazelException("Could not send data as a SocketException occured.", e));
-                            }
-                        }, 
-                        null
-                    );
+                    socket.Send(bytes);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -167,50 +144,35 @@ namespace Hazel.Udp
         /// </summary>
         void StartListeningForData()
         {
+            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+            args.SetBuffer(dataBuffer, 0, dataBuffer.Length);
+            args.Completed += ReadCallback;
+
             lock (socketLock)
-                socket.BeginReceive(dataBuffer, 0, dataBuffer.Length, SocketFlags.None, ReadCallback, dataBuffer);
+                socket.ReceiveAsync(args);
         }
 
         /// <summary>
         ///     Called when data has been received by the socket.
         /// </summary>
-        /// <param name="result">The asyncronous operation's result.</param>
-        void ReadCallback(IAsyncResult result)
+        void ReadCallback(object sender, SocketAsyncEventArgs args)
         {
-            int bytesReceived;
-
-            //End the receive operation
-            try
-            {
-                lock (socketLock)
-                    bytesReceived = socket.EndReceive(result);
-            }
-            catch (ObjectDisposedException)
-            {
-                //If the socket's been disposed then we can just end there.
-                return;
-            }
-            catch (SocketException e)
-            {
-                HandleDisconnect(new HazelException("A socket exception occured while reading data.", e));
-                return;
-            }
-
             //Exit if no bytes read, we've failed.
-            if (bytesReceived == 0)
+            if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
                 HandleDisconnect();
                 return;
             }
 
             //Copy data to new array
-            byte[] bytes = new byte[bytesReceived];
-            Buffer.BlockCopy(dataBuffer, 0, bytes, 0, bytesReceived);
+            byte[] bytes = new byte[args.BytesTransferred];
+            Buffer.BlockCopy(dataBuffer, 0, bytes, 0, args.BytesTransferred);
 
             //Begin receiving again
             try
             {
-                StartListeningForData();
+                lock (socketLock)
+                    socket.ReceiveAsync(args);
             }
             catch (SocketException e)
             {
@@ -263,7 +225,7 @@ namespace Hazel.Udp
                 {
                     State = ConnectionState.NotConnected;
 
-                    socket.Close();
+                    socket.Dispose();
                 }
             }
 

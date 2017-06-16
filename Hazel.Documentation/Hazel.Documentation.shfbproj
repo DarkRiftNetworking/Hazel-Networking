@@ -27,7 +27,7 @@
       <Argument Key="maxVersionParts" Value="" xmlns="" />
     </TransformComponentArguments>
     <DocumentationSources>
-      <DocumentationSource sourceFile="..\Hazel\Hazel.csproj" xmlns="" />
+      <DocumentationSource sourceFile="..\Hazel\Hazel.csproj" />
     </DocumentationSources>
     <SaveComponentCacheCapacity>100</SaveComponentCacheCapacity>
     <BuildAssemblerVerbosity>OnlyWarningsAndErrors</BuildAssemblerVerbosity>
@@ -58,8 +58,9 @@ Hazel can be downloaded as a NuGet package here or you can get the latest build 
     <PlugInConfigurations />
     <NamespaceSummaries>
       <NamespaceSummaryItem name="Hazel" isDocumented="True" xmlns="">Namespace for all classes shared between multiple protocol types.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="Hazel.Tcp" isDocumented="True" xmlns="">Namespace for all TCP communication classes.</NamespaceSummaryItem>
-<NamespaceSummaryItem name="Hazel.Udp" isDocumented="True" xmlns="">Namespace for all UDP communication classes.</NamespaceSummaryItem></NamespaceSummaries>
+      <NamespaceSummaryItem name="Hazel.Tcp" isDocumented="True" xmlns="">Namespace for all TCP communication classes.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Hazel.Udp" isDocumented="True" xmlns="">Namespace for all UDP communication classes.</NamespaceSummaryItem>
+    </NamespaceSummaries>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in order for Visual Studio to perform
 			 the build.  The others are optional common platform types that may appear. -->
