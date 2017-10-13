@@ -55,6 +55,7 @@ namespace Hazel.Udp
             {
                 //Handle reliable header and hellos
                 case (byte)SendOption.Reliable:
+                case (byte)SendOption.KeepAlive:
                 case (byte)UdpSendOption.Hello:
                     ReliableSend(sendOption, data, ackCallback);
                     break;
@@ -91,7 +92,8 @@ namespace Hazel.Udp
                     AcknowledgementMessageReceive(buffer);
                     break;
 
-                //We need to acknowledge hello messages but dont want to invoke any events!
+                //We need to acknowledge hello/keep alive messages but dont want to invoke any events!
+                case (byte)SendOption.KeepAlive:
                 case (byte)UdpSendOption.Hello:
                     ProcessReliableReceive(buffer, 1);
                     Statistics.LogHelloReceive(buffer.Length);

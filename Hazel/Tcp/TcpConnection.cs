@@ -134,14 +134,15 @@ namespace Hazel.Tcp
         /// <remarks>
         ///     <include file="DocInclude/common.xml" path="docs/item[@name='Connection_SendBytes_General']/*" />
         ///     <para>
-        ///         The sendOption parameter is ignored by the TcpConnection as TCP only supports FragmentedReliable 
-        ///         communication, specifying anything else will have no effect.
+        ///         The sendOption parameter can only be set as FragmentedReliable or KeepAlive.
+        ///         TCP only supports FragmentedReliable communication, specifying anything else will have no effect.
+        ///         KeepAlive packets are still send as FragmentedReliable.
         ///     </para>
         /// </remarks>
         public override void SendBytes(byte[] bytes, SendOption sendOption = SendOption.FragmentedReliable)
         {
             //Get bytes for length
-            byte[] fullBytes = AppendLengthHeader(bytes);
+            byte[] fullBytes = AppendLengthHeader(bytes, sendOption);
 
             //Write the bytes to the socket
             lock (socketLock)
@@ -175,6 +176,22 @@ namespace Hazel.Tcp
         {
             //Get length 
             int length = GetLengthFromBytes(bytes);
+
+            //Check if there is no body -> [KeepAlive] packet, if so then log it and wait for next message
+            if (length == 0)
+            {
+                try
+                {
+                    StartWaitingForHeader(callback);
+                }
+                catch (Exception e)
+                {
+                    HandleDisconnect(new HazelException("An exception occured while initiating a header receive operation.", e));
+                }
+
+                Statistics.LogHelloReceive(bytes.Length + 4);
+                return;
+            }
 
             //Begin receiving the body
             try
@@ -370,16 +387,28 @@ namespace Hazel.Tcp
         ///     Appends the length header to the bytes.
         /// </summary>
         /// <param name="bytes">The source bytes.</param>
+        /// <param name="sendOption">Allows for marking packet as KeepAlive. (Zero body length)</param>
         /// <returns>The new bytes.</returns>
-        static byte[] AppendLengthHeader(byte[] bytes)
+        static byte[] AppendLengthHeader(byte[] bytes, SendOption sendOption)
         {
             byte[] fullBytes = new byte[bytes.Length + 4];
 
-            //Append length
-            fullBytes[0] = (byte)(((uint)bytes.Length >> 24) & 0xFF);
-            fullBytes[1] = (byte)(((uint)bytes.Length >> 16) & 0xFF);
-            fullBytes[2] = (byte)(((uint)bytes.Length >> 8) & 0xFF);
-            fullBytes[3] = (byte)(uint)bytes.Length;
+            if (sendOption == SendOption.KeepAlive)
+            {
+                //Append length as 0
+                fullBytes[0] = 0;
+                fullBytes[1] = 0;
+                fullBytes[2] = 0;
+                fullBytes[3] = 0;
+            }
+            else
+            {
+                //Append length
+                fullBytes[0] = (byte) (((uint) bytes.Length >> 24) & 0xFF);
+                fullBytes[1] = (byte) (((uint) bytes.Length >> 16) & 0xFF);
+                fullBytes[2] = (byte) (((uint) bytes.Length >> 8) & 0xFF);
+                fullBytes[3] = (byte) (uint) bytes.Length;                
+            }
 
             //Add rest of bytes
             Buffer.BlockCopy(bytes, 0, fullBytes, 4, bytes.Length);

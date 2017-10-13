@@ -56,7 +56,7 @@ namespace Hazel
         /// </summary>
         bool keepAliveTimerDisposed;
 
-        readonly byte[] helloPacket = new byte[1];
+        readonly byte[] keepAlivePacket = new byte[1];
 
         /// <summary>
         ///     Starts the keepalive timer.
@@ -69,7 +69,7 @@ namespace Hazel
                     (o) =>
                     {
                         Trace.WriteLine("Keepalive packet sent.");
-                        SendBytes(helloPacket, SendOption.Reliable);
+                        SendBytes(keepAlivePacket, SendOption.KeepAlive);
                     },
                     null,
                     keepAliveInterval,
