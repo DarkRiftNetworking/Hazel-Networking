@@ -42,6 +42,8 @@ namespace Hazel.Tcp
                 this.socket.NoDelay = true;
 
                 State = ConnectionState.Connected;
+
+                InitializeKeepAliveTimer();
             }
         }
 
@@ -69,7 +71,7 @@ namespace Hazel.Tcp
                         throw new HazelException("IPV6 not supported!");
 
                     socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-                    socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)27, false);
+                    socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)27, false);                    
                 }
 
                 socket.NoDelay = true;
@@ -123,6 +125,8 @@ namespace Hazel.Tcp
                 State = ConnectionState.Connected;
 
                 SendBytes(actualBytes);
+
+                InitializeKeepAliveTimer();
             }
         }
 
@@ -145,6 +149,8 @@ namespace Hazel.Tcp
                 if (State != ConnectionState.Connected)
                     throw new InvalidOperationException("Could not send data as this Connection is not connected. Did you disconnect?");
             
+                ResetKeepAliveTimer();
+
                 try
                 {
                     socket.BeginSend(fullBytes, 0, fullBytes.Length, SocketFlags.None, null, null);
@@ -302,6 +308,8 @@ namespace Hazel.Tcp
                 HandleDisconnect(new HazelException("An exception occured while completing a chunk read operation.", e));
                 return;
             }
+
+            ResetKeepAliveTimer();
 
             StateObject state = (StateObject)result.AsyncState;
 

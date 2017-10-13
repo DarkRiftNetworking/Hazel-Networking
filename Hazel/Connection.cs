@@ -32,7 +32,7 @@ namespace Hazel
     ///     </para>
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
-    public abstract class Connection : IDisposable
+    public abstract partial class Connection : IDisposable
     {
         /// <summary>
         ///     Called when a message has been received.
@@ -261,6 +261,7 @@ namespace Hazel
         {
             if (disposing)
             {
+                DisposeKeepAliveTimer();
             }
         }
     }

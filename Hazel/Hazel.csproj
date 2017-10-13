@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connection.KeepAlive.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="ConnectionEndPoint.cs" />
     <Compile Include="ConnectionListener.cs" />
@@ -75,7 +76,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Udp\UdpConnection.Fragmented.cs" />
-    <Compile Include="Udp\UdpConnection.KeepAlive.cs" />
     <Compile Include="Udp\UdpConnection.Reliable.cs" />
     <Compile Include="Udp\UdpConnectionListener.cs" />
     <Compile Include="Udp\UdpServerConnection.cs" />

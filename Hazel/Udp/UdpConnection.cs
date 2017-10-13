@@ -15,14 +15,6 @@ namespace Hazel.Udp
     public abstract partial class UdpConnection : NetworkConnection
     {
         /// <summary>
-        ///     Creates a new UdpConnection and initializes the keep alive timer.
-        /// </summary>
-        protected UdpConnection()
-        {
-            InitializeKeepAliveTimer();
-        }
-
-        /// <summary>
         ///     Writes the given bytes to the connection.
         /// </summary>
         /// <param name="bytes">The bytes to write.</param>
@@ -194,17 +186,6 @@ namespace Hazel.Udp
         protected void SendDisconnect()
         {
             HandleSend(new byte[0], (byte)UdpSendOption.Disconnect);       //TODO Should disconnect wait for an ack?
-        }
-
-        /// <inheritdoc/>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                DisposeKeepAliveTimer();
-            }
-
-            base.Dispose(disposing);
         }
     }
 }

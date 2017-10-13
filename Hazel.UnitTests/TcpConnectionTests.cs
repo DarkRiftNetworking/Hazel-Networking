@@ -136,5 +136,66 @@ namespace Hazel.UnitTests
                 TestHelper.RunServerDisconnectTest(listener, connection);
             }
         }
+
+        /// <summary>
+        ///     Tests the keepalive functionality from the client,
+        /// </summary>
+        [TestMethod]
+        public void KeepAliveClientTest()
+        {
+            using (TcpConnectionListener listener = new TcpConnectionListener(new NetworkEndPoint(IPAddress.Any, 4296)))
+            using (TcpConnection connection = new TcpConnection(new NetworkEndPoint(IPAddress.Loopback, 4296)))
+            {
+                listener.Start();
+
+                connection.Connect();
+                connection.KeepAliveInterval = 100;
+
+                System.Threading.Thread.Sleep(1050);    //Enough time for ~10 keep alive packets
+
+                Assert.IsTrue(
+                    connection.Statistics.TotalBytesSent >= 30 &&
+                    connection.Statistics.TotalBytesSent <= 50,
+                    "Sent: " + connection.Statistics.TotalBytesSent
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Tests the keepalive functionality from the client,
+        /// </summary>
+        [TestMethod]
+        public void KeepAliveServerTest()
+        {
+            ManualResetEvent mutex = new ManualResetEvent(false);
+            TcpConnection listenerConnectionToClient = null;
+
+            using (TcpConnectionListener listener = new TcpConnectionListener(new NetworkEndPoint(IPAddress.Any, 4296)))
+            using (TcpConnection connection = new TcpConnection(new NetworkEndPoint(IPAddress.Loopback, 4296)))
+            {                
+                listener.NewConnection += delegate (object sender, NewConnectionEventArgs args)
+                {
+                    listenerConnectionToClient = (TcpConnection)args.Connection;
+                    listenerConnectionToClient.KeepAliveInterval = 100;
+
+                    Thread.Sleep(1050);    //Enough time for ~10 keep alive packets
+
+                    mutex.Set();
+                };
+
+                listener.Start();
+
+                connection.Connect();
+
+                mutex.WaitOne();
+
+                Assert.IsNotNull(listenerConnectionToClient);
+                Assert.IsTrue(
+                    listenerConnectionToClient.Statistics.TotalBytesSent >= 30 &&
+                    listenerConnectionToClient.Statistics.TotalBytesSent <= 50,
+                    "Sent: " + listenerConnectionToClient.Statistics.TotalBytesSent
+                );
+            }
+        }
     }
 }

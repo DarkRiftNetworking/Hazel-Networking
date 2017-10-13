@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Net.Sockets;
+using System.Net;
 using System.Threading;
 
-
-namespace Hazel.Udp
+namespace Hazel
 {
-    partial class UdpConnection
+    partial class Connection
     {
         /// <summary>
         ///     The interval from data being received or transmitted to a keepalive packet being sent in milliseconds.
@@ -33,7 +34,7 @@ namespace Hazel.Udp
             set
             {
                 keepAliveInterval = value;
-                
+
                 //Update timer
                 ResetKeepAliveTimer();
             }
@@ -55,10 +56,12 @@ namespace Hazel.Udp
         /// </summary>
         bool keepAliveTimerDisposed;
 
+        readonly byte[] helloPacket = new byte[1];
+
         /// <summary>
         ///     Starts the keepalive timer.
         /// </summary>
-        void InitializeKeepAliveTimer()
+        protected void InitializeKeepAliveTimer()
         {
             lock (keepAliveTimerLock)
             {
@@ -66,7 +69,7 @@ namespace Hazel.Udp
                     (o) =>
                     {
                         Trace.WriteLine("Keepalive packet sent.");
-                        SendHello(null, null);
+                        SendBytes(helloPacket, SendOption.Reliable);
                     },
                     null,
                     keepAliveInterval,
@@ -78,20 +81,23 @@ namespace Hazel.Udp
         /// <summary>
         ///     Resets the keepalive timer to zero.
         /// </summary>
-        void ResetKeepAliveTimer()
+        protected void ResetKeepAliveTimer()
         {
             lock (keepAliveTimerLock)
-                keepAliveTimer.Change(keepAliveInterval, keepAliveInterval);
+            {                
+                if(keepAliveTimer != null)
+                    keepAliveTimer.Change(keepAliveInterval, keepAliveInterval);
+            }
         }
 
         /// <summary>
         ///     Disposes of the keep alive timer.
         /// </summary>
-        void DisposeKeepAliveTimer()
+        protected void DisposeKeepAliveTimer()
         {
-            lock(keepAliveTimerLock)
+            lock (keepAliveTimerLock)
             {
-                if (!keepAliveTimerDisposed)
+                if (!keepAliveTimerDisposed && keepAliveTimer != null)
                     keepAliveTimer.Dispose();
                 keepAliveTimerDisposed = true;
             }

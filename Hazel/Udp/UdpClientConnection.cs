@@ -160,6 +160,8 @@ namespace Hazel.Udp
                 Dispose();
                 throw new HazelException("Connection attempt timed out.");
             }
+
+            InitializeKeepAliveTimer();
         }
 
         /// <summary>
