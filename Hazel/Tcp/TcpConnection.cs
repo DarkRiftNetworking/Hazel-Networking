@@ -190,6 +190,12 @@ namespace Hazel.Tcp
             //Begin receiving from the start
             try
             {
+                 //Fire DataReceived event before reading next message.
+                if(TcpOptions.ForceReliableOrdering == true)
+                {
+                    InvokeDataReceived(bytes, SendOption.FragmentedReliable);
+                }
+
                 StartWaitingForHeader(BodyReadCallback);
             }
             catch (Exception e)
@@ -199,8 +205,11 @@ namespace Hazel.Tcp
 
             Statistics.LogFragmentedReceive(bytes.Length, bytes.Length + 4);
 
-            //Fire DataReceived event
-            InvokeDataReceived(bytes, SendOption.FragmentedReliable);
+            //Fire DataReceived event after reading next message for better throughput.
+            if(TcpOptions.ForceReliableOrdering == false)
+            {
+                InvokeDataReceived(bytes, SendOption.FragmentedReliable);
+            }
         }
 
         /// <summary>
