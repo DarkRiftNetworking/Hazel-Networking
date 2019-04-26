@@ -1,3 +1,7 @@
+# This version of Hazel is no longer supported! For the latest Hazel please see [this fork](https://github.com/willardf/Hazel-Networking)!
+
+-----
+
 #### Hazel Networking is a low-level networking library for C# providing connection orientated, message based communication via TCP, UDP and RUDP.
 
 Its aim is to provide a standardized interface for web communication so that using and switching between protocols is incredibly simple.
@@ -14,10 +18,6 @@ Hazel can be downloaded as a NuGet package [here](https://www.nuget.org/packages
 - IPv4 and IPv6 support
 - Automatic statistics about data passing in and out of connections
 - Designed to be as fast and leightweight as possible
-
------
-
-### Hazel is currently in beta; things should (but might not) work!
 
 -----
 
