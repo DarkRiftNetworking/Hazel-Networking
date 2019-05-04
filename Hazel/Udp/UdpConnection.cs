@@ -15,14 +15,6 @@ namespace Hazel.Udp
     public abstract partial class UdpConnection : NetworkConnection
     {
         /// <summary>
-        ///     Creates a new UdpConnection and initializes the keep alive timer.
-        /// </summary>
-        protected UdpConnection()
-        {
-            InitializeKeepAliveTimer();
-        }
-
-        /// <summary>
         ///     Writes the given bytes to the connection.
         /// </summary>
         /// <param name="bytes">The bytes to write.</param>
@@ -63,6 +55,7 @@ namespace Hazel.Udp
             {
                 //Handle reliable header and hellos
                 case (byte)SendOption.Reliable:
+                case (byte)SendOption.KeepAlive:
                 case (byte)UdpSendOption.Hello:
                     ReliableSend(sendOption, data, ackCallback);
                     break;
@@ -99,7 +92,8 @@ namespace Hazel.Udp
                     AcknowledgementMessageReceive(buffer);
                     break;
 
-                //We need to acknowledge hello messages but dont want to invoke any events!
+                //We need to acknowledge hello/keep alive messages but dont want to invoke any events!
+                case (byte)SendOption.KeepAlive:
                 case (byte)UdpSendOption.Hello:
                     ProcessReliableReceive(buffer, 1);
                     Statistics.LogHelloReceive(buffer.Length);
@@ -194,17 +188,6 @@ namespace Hazel.Udp
         protected void SendDisconnect()
         {
             HandleSend(new byte[0], (byte)UdpSendOption.Disconnect);       //TODO Should disconnect wait for an ack?
-        }
-
-        /// <inheritdoc/>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                DisposeKeepAliveTimer();
-            }
-
-            base.Dispose(disposing);
         }
     }
 }

@@ -194,21 +194,17 @@ namespace Hazel.UnitTests
         public void KeepAliveServerTest()
         {
             ManualResetEvent mutex = new ManualResetEvent(false);
+            UdpConnection listenerConnectionToClient = null;
 
             using (UdpConnectionListener listener = new UdpConnectionListener(new NetworkEndPoint(IPAddress.Any, 4296)))
             using (UdpConnection connection = new UdpClientConnection(new NetworkEndPoint(IPAddress.Loopback, 4296)))
             {
                 listener.NewConnection += delegate(object sender, NewConnectionEventArgs args)
                 {
-                    ((UdpConnection)args.Connection).KeepAliveInterval = 100;
+                    listenerConnectionToClient = (UdpConnection) args.Connection;
+                    listenerConnectionToClient.KeepAliveInterval = 100;
 
                     Thread.Sleep(1050);    //Enough time for ~10 keep alive packets
-
-                    Assert.IsTrue(
-                        args.Connection.Statistics.TotalBytesSent >= 30 &&
-                        args.Connection.Statistics.TotalBytesSent <= 50,
-                        "Sent: " + args.Connection.Statistics.TotalBytesSent
-                    );
 
                     mutex.Set();
                 };
@@ -218,6 +214,13 @@ namespace Hazel.UnitTests
                 connection.Connect();
 
                 mutex.WaitOne();
+
+                Assert.IsNotNull(listenerConnectionToClient);
+                Assert.IsTrue(
+                    listenerConnectionToClient.Statistics.TotalBytesSent >= 30 &&
+                    listenerConnectionToClient.Statistics.TotalBytesSent <= 50,
+                    "Sent: " + listenerConnectionToClient.Statistics.TotalBytesSent
+                );
             }
         }
 

@@ -42,6 +42,8 @@ namespace Hazel.Udp
             this.IPMode = IPMode;
 
             State = ConnectionState.Connected;
+
+            InitializeKeepAliveTimer();
         }
 
         /// <inheritdoc />

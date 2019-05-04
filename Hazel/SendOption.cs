@@ -42,6 +42,15 @@ namespace Hazel
         ///     guaranteed to arrive and to arrive only once but the sending process may require more memory, processing,
         ///     a larger number protocol bytes and may be slower than sending unreliably.
         /// </remarks>
-        FragmentedReliable = 2
+        FragmentedReliable = 2,
+
+        /// <summary>
+        ///     Requests data be treated as keep alive packet.
+        /// </summary>
+        /// <remarks>
+        ///     This packet type is used soly to keep connection working.
+        ///     Data inside keep alive packet will be ignored.
+        /// </remarks>
+        KeepAlive = 3
     }
 }
