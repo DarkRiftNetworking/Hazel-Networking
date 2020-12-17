@@ -289,7 +289,7 @@ namespace Hazel.Udp.FewerThreads
             QueueRawData(response, remoteEndPoint);
         }
 
-        protected void QueueRawData(ByteSpan span, EndPoint remoteEndPoint)
+        protected virtual void QueueRawData(ByteSpan span, EndPoint remoteEndPoint)
         {
             this.sendQueue.TryAdd(new SendMessageInfo() { Span = span, Recipient = remoteEndPoint });
         }
