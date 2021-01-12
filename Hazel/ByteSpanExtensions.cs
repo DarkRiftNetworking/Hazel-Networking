@@ -79,9 +79,9 @@ namespace Hazel
             value |= (ulong)input[offset + 0] << 40;
             value |= (ulong)input[offset + 1] << 32;
             value |= (ulong)input[offset + 2] << 24;
-            value |= (ulong)input[offset + 2] << 16;
-            value |= (ulong)input[offset + 2] <<  8;
-            value |= (ulong)input[offset + 2] <<  0;
+            value |= (ulong)input[offset + 3] << 16;
+            value |= (ulong)input[offset + 4] <<  8;
+            value |= (ulong)input[offset + 5] <<  0;
             return value;
         }
     }
